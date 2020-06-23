@@ -1,30 +1,30 @@
 ############################################################################################
 ############################################################################################
 ###																						 ###
-###					SCRIPT PARA EXCLUS√O DE ARQUIVOS ANTIGOS							 ###
-### 02/03/2020														Lauan Roberto Coelho ###
+###					SCRIPT PARA EXCLUS√ÉO DE ARQUIVOS ANTIGOS							 ###
+### 19/06/2020														Lauan Roberto Coelho ###
 ############################################################################################
 ############################################################################################
 #
-# UtilizaÁ„o:
+# Utiliza√ß√£o:
 #	Remove-Old-Files.ps1 -Acao LogOnly -SearchPath D:\Arquivos\Financeiro -LogPath C:\logs\removearquivos.log
 #
 #
 # -Acao:
-#	AÁ„o a ser executada pelo script. Duas opÁıes possÌveis:
-#		"LogOnly" - Apenas gera log com os arquivos que ser„o excluÌdos
-#		"Remove" - Remove os arquivos e gera o log com as execuÁıes
+#	A√ß√£o a ser executada pelo script. Duas op√ß√µes poss√≠veis:
+#		"LogOnly" - Apenas gera log com os arquivos que ser√£o exclu√≠dos
+#		"Remove" - Remove os arquivos e gera o log com as execu√ß√µes
 #
 # -SearchPath:
 #	Caminho base da pesquisa no formato D:\pasta1\pasta2
-#	ATEN«√O!!! Todos os arquivos abaixo desse diretÛrio ser„o afetados!!
+#	ATEN√á√ÉO!!! Todos os arquivos abaixo desse diret√≥rio ser√£o afetados!!
 #
 #
 # -LogPath (Opcional):
 #	Caminho para o arquivo de logs no formato C:\pasta\log.log
 #
 #
-#	NOTA: A opÁ„o -Verbose pode ser ativada para maiores detalhes durante a execuÁ„o
+#	NOTA: A op√ß√£o -Verbose pode ser ativada para maiores detalhes durante a execu√ß√£o
 #
 param(
 	[Parameter(Mandatory=$true)][ValidateSet("Remove","LogOnly")][String]$Acao,
@@ -32,41 +32,45 @@ param(
 	[Parameter(Mandatory=$false)][String]$LogPath
 )
 
-#Define a funÁ„o de Log
+#Define a fun√ß√£o de Log
 Function Log {
     param(
         [Parameter(Mandatory=$true)][String]$msg
     )
 	$datalog = Get-Date -Format ddMMyyyy
-	if ($logPath -eq $null){
+	if ($null -eq $logPath){
 		$logPath = "C:\LimpaArquivos\$datalog-limpaArquivos.log"
 	}
     Add-Content $logPath $msg
 }
 
-#Define o perÌodo de exclus„o dos arquivos para mais de 5 anos
+#Define o per√≠odo de exclus√£o dos arquivos para mais de 5 anos
 $ano = (Get-Date -Format yyyy)-5
 $data = Get-Date -Year $ano
 
-#Lista todos os arquivos que se encaixam no critÈrio
+#Lista todos os arquivos que se encaixam no crit√©rio
 Write-Verbose "Gerando lista de arquivos."
 $erros = $null
-$files = Get-ChildItem $searchPath -Recurse -ErrorVariable +erros -ErrorAction SilentlyContinue | Where-Object {$_.LastWriteTime -lt $data -and $_.LastAccessTime -lt $data}
+$files = Get-ChildItem $searchPath -Recurse -ErrorVariable +erros -ErrorAction SilentlyContinue | Where-Object {$_.LastWriteTime -lt $data -and $_.LastAccessTime -lt $data -and $_.Attributes -notMatch "Directory"}
 
-if ($erros -ne $null) {
+if ($null -ne $erros) {
 	foreach ($erro in $erros) {
 		Write-Warning "Um erro do tipo $($erro.CategoryInfo.Reason) foi encontrado. Verifique os logs para mais detalhes."
 		Log "ERRO: O erro $($erro.categoryinfo.reason) foi disparado no item $($erro.categoryinfo.targetname)"
 	}
 }
 
-if ($files -eq $null) {Write-Verbose "Nenhum arquivo atende aos criterios da pesquisa."}
+$total = $null
+$total = 0
 
-#Executa a aÁ„o nos arquivos
+if ($null -eq $files) {Write-Verbose "Nenhum arquivo atende aos criterios da pesquisa."}
+
+#Executa a a√ß√£o nos arquivos
 foreach ($file in $files) {
+	$total += $file.length
 	if ($acao -eq "LogOnly"){
-		Write-Verbose "O arquivo: $($file.fullname) sera excluido se a opcao 'Remove' for utilizada."
-		Log "O arquivo: $($file.fullname) sera excluido se a opcao 'Remove' for utilizada."
+		Write-Verbose "O arquivo: $($file.fullname) sera excluido se a opcao 'Remove' for utilizada. Tamanho do arquivo: $([math]::Round($file.length/1MB,2))MB"
+		Log "O arquivo: $($file.fullname) sera excluido se a opcao 'Remove' for utilizada. Tamanho do arquivo: $([math]::Round($file.length/1MB,2))MB"
 	}
 	elseif ($acao -eq "Remove"){
 		Write-Verbose "O arquivo: $($file.fullname) esta sendo excluido."
@@ -82,4 +86,6 @@ foreach ($file in $files) {
 		Log "Arquivo $($file.fullname) excluido."
 	}
 }
-Write-Verbose "Encerrando execuÁ„o."
+Write-Verbose "O espa√ßo consumido pelos arquivos a serem exclu√≠dos √© de $([math]::Round($total/1MB,2))MB"
+Log "O espa√ßo consumido pelos arquivos a serem exclu√≠dos √© de $([math]::Round($total/1MB,2))MB"
+Write-Verbose "Encerrando execu√ß√£o."
